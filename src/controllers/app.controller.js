@@ -77,7 +77,7 @@ export const generateRefreshToken = async (req, res) => {
 
   res.cookie("kpRefreshToken", refreshToken, {
     httpOnly: true,
-    secure: true,
+    secure: false,
     maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
     sameSite: "strict",
   });
