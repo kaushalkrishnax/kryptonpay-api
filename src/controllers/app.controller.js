@@ -1,7 +1,7 @@
 import { App } from "../models/app.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import jwt from "jsonwebtoken";
+import { decryptApiKey } from "../utils/decryptApiKey.js";
 
 export const registerApp = async (req, res) => {
   const requiredFields = ["appName", "appType"];
@@ -51,38 +51,34 @@ export const generateApiKey = async (req, res) => {
     .json(new ApiResponse(201, { apiKey }, "API key generated successfully"));
 };
 
-export const generateRefreshToken = async (req, res) => {
+export const generateAccessToken = async (req, res) => {
   const apiKey = req.headers["kp-api-key"];
 
   if (!apiKey) {
     throw new ApiError(400, "API key is required");
   }
 
-  let appId;
-  try {
-    const decoded = jwt.verify(apiKey, process.env.API_KEY_SECRET);
-    appId = decoded.appId;
-  } catch (error) {
-    throw new ApiError(401, "Invalid API key");
-  }
-
+  const appId = decryptApiKey(apiKey);
   const app = await App.findOne({ appId });
+
   if (!app) {
-    throw new ApiError(401, "Invalid API key");
+    throw new ApiError(401, "Unauthorized request: Invalid API key");
   }
 
-  const refreshToken = await app.generateRefreshToken();
+  const accessToken = await app.generateAccessToken();
 
   app.save();
 
-  res.cookie("kpRefreshToken", refreshToken, {
+  res.cookie("_kpat", accessToken, {
     httpOnly: true,
-    secure: false,
-    maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
+    secure: true,
+    maxAge: 15 * 60 * 1000, // 15 minutes
     sameSite: "strict",
   });
 
-  res.status(201).json({ message: "Refresh token generated successfully" });
+  res
+    .status(201)
+    .json({ message: "Access token generated successfully", success: true });
 };
 
 export const getRazorpayKeyId = async (req, res) => {

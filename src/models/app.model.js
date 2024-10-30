@@ -23,47 +23,58 @@ const appSchema = new Schema(
       type: String,
       required: true,
     },
-    refreshToken: {
+    accessToken: {
       type: String,
+    },
+    salt: {
+      type: String,
+      required: true,
     },
   },
   { timestamps: true }
 );
 
-appSchema.methods.generateApiKey = async function () {
-  const payload = {
-    appId: this.appId,
-  };
-
-  const apiKey = jwt.sign(payload, process.env.API_KEY_SECRET, {
-    expiresIn: process.env.API_KEY_EXPIRY,
-  });
-  const hashedApiKey = await bcrypt.hash(apiKey, 10);
-  this.apiKey = hashedApiKey;
-
-  return apiKey;
+appSchema.methods.generateSalt = function () {
+  const salt = crypto.randomBytes(7).toString("hex");
+  this.salt = salt;
+  return salt;
 };
 
-appSchema.methods.generateRefreshToken = async function () {
+appSchema.methods.generateApiKey = async function () {
+  const algorithm = "aes-256-cbc";
+  const secretKey = process.env.AES_SECRET;
+  const iv = crypto.randomBytes(16);
+  const appId = this.appId;
+
+  const cipher = crypto.createCipheriv(algorithm, Buffer.from(secretKey), iv);
+  let encrypted = cipher.update(appId);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  const encryptedApiKey = iv.toString("hex") + ":" + encrypted.toString("hex");
+
+  this.generateSalt();
+  this.apiKey = encryptedApiKey;
+  return encryptedApiKey;
+};
+
+appSchema.methods.generateAccessToken = async function () {
   const payload = {
-    _id: this._id,
     appId: this.appId,
     appName: this.appName,
     appType: this.appType,
   };
 
-  const refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+  const accessToken = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
+    expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
   });
 
-  const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-  this.refreshToken = hashedRefreshToken;
+  const hashedAccessToken = await bcrypt.hash(accessToken + this.salt, 10);
+  this.accessToken = hashedAccessToken;
 
-  return refreshToken;
+  return accessToken;
 };
 
-appSchema.methods.validateRefreshToken = async function (inputRefreshToken) {
-  return await bcrypt.compare(inputRefreshToken, this.refreshToken);
+appSchema.methods.validateAccessToken = async function (inputAccessToken) {
+  return await bcrypt.compare(inputAccessToken + this.salt, this.accessToken);
 };
 
 export const App = model("App", appSchema);
