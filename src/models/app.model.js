@@ -16,6 +16,7 @@ const appSchema = new Schema(
     },
     appType: {
       type: String,
+      enum: ["dev", "prod", "other"],
       required: true,
       default: "test",
     },
@@ -42,11 +43,11 @@ appSchema.methods.generateSalt = function () {
 
 appSchema.methods.generateApiKey = async function () {
   const algorithm = "aes-256-cbc";
-  const secretKey = process.env.AES_SECRET;
-  const iv = crypto.randomBytes(16);
+  const secretKey = Buffer.from(process.env.AES_SECRET, "hex");
+  const iv = Buffer.from(process.env.AES_IV, "hex");
   const appId = this.appId;
-
-  const cipher = crypto.createCipheriv(algorithm, Buffer.from(secretKey), iv);
+  
+  const cipher = crypto.createCipheriv(algorithm, secretKey, iv);
   let encrypted = cipher.update(appId);
   encrypted = Buffer.concat([encrypted, cipher.final()]);
   const encryptedApiKey = iv.toString("hex") + ":" + encrypted.toString("hex");
