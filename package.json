@@ -4,7 +4,6 @@
   "description": "KryptonLab Payments API",
   "main": "src/index.js",
   "type": "module",
-  "proxy": "13.127.170.65",
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js"
