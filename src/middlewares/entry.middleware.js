@@ -13,7 +13,7 @@ export const verifyApp = asyncHandler(async (req, _, next) => {
     }
 
     if (!refreshToken) {
-      throw new ApiError(401, "Unauthorized request: No refresh token found");
+      throw new ApiError(401, "Unauthorized1 request: No refresh token found");
     }
 
     let decodedApiKey;
