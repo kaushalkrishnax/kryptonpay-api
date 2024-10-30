@@ -50,7 +50,12 @@ app.use((req, res, next) => {
     res
       .status(403)
       .json(
-        new ApiResponse(403, { path: req.path }, "Forbidden: Access denied")
+        new ApiResponse(
+          403,
+          { path: req.path },
+          "Forbidden: Access denied",
+          false
+        )
       );
   }
 });

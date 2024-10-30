@@ -112,7 +112,7 @@ export const revokeApiKey = async (req, res) => {
     .json(
       new ApiResponse(
         201,
-        {},
+        { appId: app.appId },
         "API key revoked, Please generate a new one from dashboard"
       )
     );
