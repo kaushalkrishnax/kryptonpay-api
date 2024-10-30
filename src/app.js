@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import paymentRouter from "./routes/payment.routes.js";
 import appRouter from "./routes/app.routes.js";
+import { ApiResponse } from "./utils/ApiResponse.js";
 
 /** Configurations */
 const app = express();
@@ -48,7 +49,9 @@ app.use((req, res, next) => {
   } else {
     res
       .status(403)
-      .json({ message: "Forbidden: Access denied", success: false });
+      .json(
+        new ApiResponse(403, { path: req.path }, "Forbidden: Access denied")
+      );
   }
 });
 
@@ -59,15 +62,18 @@ app.use(express.static(path.join(__dirname, "public")));
 
 /** API Routes */
 app.get("/api", (req, res) => {
-  res.status(200).json({ message: "KryptonPay API is live", success: true });
+  res
+    .status(200)
+    .json(new ApiResponse(200, { path: req.path }, "KryptonPay API is live"));
 });
 
 // Protected API routes
 app.get("/api/v1", (req, res) => {
-  res.status(200).json({ message: "Allowed: Access approved", success: true });
+  res
+    .status(200)
+    .json(new ApiResponse(200, { path: req.path }, "Allowed: Access approved"));
 });
 app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/app", appRouter);
 
 export { app };
-

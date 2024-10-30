@@ -78,7 +78,9 @@ export const generateAccessToken = async (req, res) => {
 
   res
     .status(201)
-    .json({ message: "Access token generated successfully", success: true });
+    .json(
+      new ApiResponse(201, { apiKey }, "Access token generated successfully")
+    );
 };
 
 export const getRazorpayKeyId = async (req, res) => {
@@ -91,22 +93,27 @@ export const revokeApiKey = async (req, res) => {
   const apiKey = req.headers["kp-api-key"];
 
   if (!apiKey) {
-    throw new ApiError(412, "API key is required");
+    throw new ApiError(401, "API key is required");
   }
 
   const appId = decryptApiKey(apiKey);
   const app = await App.findOne({ appId });
 
   if (!app) {
-    throw new ApiError(412, "Unauthorized request: Invalid API key");
+    throw new ApiError(401, "Unauthorized request: Invalid API key");
   }
 
   app.apiKey = null;
   app.accessToken = null;
   await app.save();
 
-  res.status(200).json({
-    message: "API key revoked, Please generate a new one from dashboard",
-    success: true,
-  });
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        201,
+        {},
+        "API key revoked, Please generate a new one from dashboard"
+      )
+    );
 };

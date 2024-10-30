@@ -46,8 +46,13 @@ export const verifyPayment = async (req, res) => {
     }
   });
 
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount, currency } =
-    req.body;
+  const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+    amount,
+    currency,
+  } = req.body;
 
   const body = razorpay_order_id + "|" + razorpay_payment_id;
   const expectedSignature = crypto
@@ -78,9 +83,9 @@ export const verifyPayment = async (req, res) => {
           )
         );
     } catch (error) {
-      throw new ApiError(500, "Failed to record payment in the database");
+      throw new ApiError(500, "Failed to record payment");
     }
   } else {
-    res.status(400).json(new ApiError(400, "Payment verification failed"));
+    throw new ApiError(400, "Payment verification failed");
   }
 };

@@ -8,6 +8,7 @@ import {
   getRazorpayKeyId,
   revokeApiKey,
 } from "../controllers/app.controller.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 const appRouter = express.Router();
 
 appRouter.post("/register", asyncHandler(registerApp));
@@ -19,7 +20,7 @@ appRouter.post(
   "/verify",
   verifyApp,
   asyncHandler(async (req, res) => {
-    res.status(200).json({message: "success", success: true});
+    res.status(200).json(new ApiResponse(200, { ip: req.ip }));
   })
 );
 
