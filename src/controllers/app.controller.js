@@ -71,7 +71,7 @@ export const generateAccessToken = async (req, res) => {
 
   res.cookie("_kpat", accessToken, {
     httpOnly: true,
-    secure: true,
+    secure: false, //PROD:  true
     maxAge: 15 * 60 * 1000, // 15 minutes
     sameSite: "strict",
   });
