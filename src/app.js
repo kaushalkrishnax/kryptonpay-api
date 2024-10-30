@@ -9,22 +9,30 @@ import appRouter from "./routes/app.routes.js";
 
 const app = express();
 
-app.use(cors());
+// List of allowed origins
+const allowedOrigins = [
+    'http://127.0.0.1:5500',
+    'https://billing.xyrocloud.in',
+    'https://payments.kryptonlab.tech',
+    'http://13.127.170.65:8000',
+    'http://13.127.170.65:80',
+];
 
-const allowedOrigins = ['http://13.127.170.65', 'http://127.0.0.1:5500'];
-
+// CORS configuration
 app.use((req, res, next) => {
     const origin = req.get('Origin');
+    const isApiRoute = req.path.startsWith('/api/v1');
 
-    console.log(`Request from Origin: ${origin}`);
-
-    if (allowedOrigins.includes(origin)) {
-        console.log('Allowed');
-	res.status(200).json({message: 'Allowed: Your origin is allowed'});
+    if (isApiRoute && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+	next()
+	res.status(200).json({ message: 'Allowed: Access approved' })
+    } else if (!isApiRoute) {
+	// Only non-apiRoute request allowed
         next();
     } else {
-        console.log('Blocked');
-        res.status(403).send({message: 'Forbidden: Your origin is not allowed'});
+        res.status(403).json({ message: 'Forbidden: Access denied' });
     }
 });
 
@@ -34,8 +42,8 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
 // Test route
-app.get("/api/v1", (req, res) => {
-  res.status(200).json({ message: "KryptonPay API is live", success: true });
+app.get("/api", (req, res) => {
+    res.status(200).json({ message: "KryptonPay API is live", success: true });
 });
 
 // Static Webpage Serving
@@ -48,3 +56,4 @@ app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/app", appRouter);
 
 export { app };
+
