@@ -19,7 +19,7 @@ appRouter.post(
   "/verify",
   verifyApp,
   asyncHandler(async (req, res) => {
-    res.status(200).send("success");
+    res.status(200).json({message: "success", success: true});
   })
 );
 
