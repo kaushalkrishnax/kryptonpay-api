@@ -57,6 +57,11 @@ appSchema.methods.generateApiKey = async function () {
   return encryptedApiKey;
 };
 
+appSchema.methods.revokeApiKey = async function () {
+  this.apiKey = null;
+  this.accessToken = null;
+};
+
 appSchema.methods.generateAccessToken = async function () {
   const payload = {
     appId: this.appId,
@@ -74,8 +79,8 @@ appSchema.methods.generateAccessToken = async function () {
   return accessToken;
 };
 
-appSchema.methods.validateAccessToken = async function (inputAccessToken) {
-  return await bcrypt.compare(inputAccessToken + this.salt, this.accessToken);
-};
+  appSchema.methods.validateAccessToken = async function (inputAccessToken) {
+    return await bcrypt.compare(inputAccessToken + this.salt, this.accessToken);
+  };
 
 export const App = model("App", appSchema);

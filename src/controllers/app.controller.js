@@ -4,116 +4,139 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { decryptApiKey } from "../utils/decryptApiKey.js";
 
 export const registerApp = async (req, res) => {
-  const requiredFields = ["appName", "appType"];
+  try {
+    const requiredFields = ["appName", "appType"];
 
-  requiredFields.forEach((field) => {
-    if (!req.body[field]) {
-      throw new ApiError(400, `${field} is required`);
+    requiredFields.forEach((field) => {
+      if (!req.body[field]) {
+        throw new ApiError(400, `${field} is required`);
+      }
+    });
+
+    const { appName, appType } = req.body;
+
+    if (!["dev", "prod", "other"].includes(appType)) {
+      throw new ApiError(400, "Invalid app type");
     }
-  });
 
-  const { appName, appType } = req.body;
+    const localApp = new App({
+      appId: `kp-${appName
+        .replace(" ", "_")
+        .toLowerCase()}-${Date.now().toString()}-app`,
+      appName,
+      appType,
+    });
 
-  console.log(req.body);
+    localApp.apiKey = await localApp.generateApiKey();
 
-  const localApp = new App({
-    appId: `kp-${appName
-      .replace(" ", "_")
-      .toLowerCase()}-${Date.now().toString()}-app`,
-    appName,
-    appType,
-  });
+    const app = await localApp.save();
+    req.app = app;
 
-  const apiKey = await localApp.generateApiKey();
-  localApp.apiKey = apiKey;
-
-  const appExists = await App.findOne({ appId: localApp.appId });
-  if (appExists) {
-    throw new ApiError(500, "App already exists, Please retry");
+    res
+      .status(201)
+      .json(new ApiResponse(201, { app }, "App registered successfully"));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error.message || "Something went wrong while registering app"
+    );
   }
-
-  const app = await localApp.save();
-
-  res
-    .status(201)
-    .json(new ApiResponse(201, app, "App registered successfully"));
 };
 
 export const generateApiKey = async (req, res) => {
-  const apiKey = await req.app.generateApiKey();
+  try {
+    const app = await App.findOne({ appId: req.app.appId });
 
-  const app = await App.findOne({ appId: req.app.appId });
-  req.app.apiKey = apiKey;
-  app.apiKey = apiKey;
-  await app.save();
-  res
-    .status(201)
-    .json(new ApiResponse(201, { apiKey }, "API key generated successfully"));
+    const apiKey = await app.generateApiKey();
+    req.app.apiKey = apiKey;
+
+    await app.save();
+
+    res
+      .status(201)
+      .json(new ApiResponse(201, { apiKey }, "API key generated successfully"));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error.message || "Something went wrong while generating API key"
+    );
+  }
 };
 
 export const generateAccessToken = async (req, res) => {
-  const apiKey = req.headers["kp-api-key"];
+  try {
+    const apiKey = req.headers["kp-api-key"];
 
-  if (!apiKey) {
-    throw new ApiError(401, "API key is required");
-  }
+    if (!apiKey) {
+      throw new ApiError(401, "Unauthorized request: No API key provided");
+    }
 
-  const appId = decryptApiKey(apiKey);
-  const app = await App.findOne({ appId });
+    const appId = decryptApiKey(apiKey);
+    const app = await App.findOne({ appId });
 
-  if (!app) {
-    throw new ApiError(401, "Unauthorized request: Invalid API key");
-  }
+    if (!app) {
+      throw new ApiError(401, "Unauthorized request: Invalid API key");
+    }
 
-  const accessToken = await app.generateAccessToken();
+    const accessToken = await app.generateAccessToken();
+    await app.save();
 
-  app.save();
+    res.cookie("_kpat", accessToken, {
+      httpOnly: true,
+      secure: false, //PROD: true
+      maxAge: 15 * 60 * 1000, // 15 minutes
+      sameSite: "strict",
+    });
 
-  res.cookie("_kpat", accessToken, {
-    httpOnly: true,
-    secure: false, //PROD:  true
-    maxAge: 15 * 60 * 1000, // 15 minutes
-    sameSite: "strict",
-  });
-
-  res
-    .status(201)
-    .json(
-      new ApiResponse(201, { apiKey }, "Access token generated successfully")
+    res
+      .status(201)
+      .json(new ApiResponse(201, null, "Access token generated successfully"));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error.message || "Something went wrong while generating access token"
     );
+  }
 };
 
 export const getRazorpayKeyId = async (req, res) => {
-  res
-    .status(200)
-    .json(new ApiResponse(200, { key: process.env.RAZORPAY_KEY_ID }));
+  try {
+    res
+      .status(200)
+      .json(new ApiResponse(200, { key: process.env.RAZORPAY_KEY_ID }));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error.message || "Something went wrong while getting Razorpay key id"
+    );
+  }
 };
 
 export const revokeApiKey = async (req, res) => {
-  const apiKey = req.headers["kp-api-key"];
+  try {
+    const app = await App.findOne({ appId: req.app.appId });
 
-  if (!apiKey) {
-    throw new ApiError(401, "API key is required");
-  }
+    req.app.apiKey = null;
+    await app.revokeApiKey();
 
-  const appId = decryptApiKey(apiKey);
-  const app = await App.findOne({ appId });
+    await app.save();
 
-  if (!app) {
-    throw new ApiError(401, "Unauthorized request: Invalid API key");
-  }
+    delete app.accessToken;
+    delete app.salt;
 
-  app.apiKey = null;
-  app.accessToken = null;
-  await app.save();
-
-  res
-    .status(200)
-    .json(
-      new ApiResponse(
-        201,
-        { appId: app.appId },
-        "API key revoked, Please generate a new one from dashboard"
-      )
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          201,
+          { app },
+          "API key revoked, Please generate a new one from the dashboard"
+        )
+      );
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error.message || "Something went wrong while revoking API key"
     );
+  }
 };

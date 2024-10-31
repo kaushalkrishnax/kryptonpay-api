@@ -49,9 +49,7 @@ app.use((req, res, next) => {
   } else {
     res
       .status(403)
-      .json(
-        new ApiResponse(403, { path: req.path }, "Forbidden: Access denied")
-      );
+      .json(new ApiResponse(403, null, "Forbidden: Access denied"));
   }
 });
 
@@ -62,16 +60,12 @@ app.use(express.static(path.join(__dirname, "public")));
 
 /** API Routes */
 app.get("/api", (req, res) => {
-  res
-    .status(200)
-    .json(new ApiResponse(200, { path: req.path }, "KryptonPay API is live"));
+  res.status(200).json(new ApiResponse(200, null, "KryptonPay API is live"));
 });
 
 // Protected API routes
 app.get("/api/v1", (req, res) => {
-  res
-    .status(200)
-    .json(new ApiResponse(200, { path: req.path }, "Allowed: Access approved"));
+  res.status(200).json(new ApiResponse(200, null, "Allowed: Access approved"));
 });
 app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/app", appRouter);

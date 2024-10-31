@@ -30,7 +30,10 @@ export const createOrder = async (req, res) => {
         new ApiResponse(201, { razorpayOrder }, "Order created successfully")
       );
   } catch (error) {
-    throw new ApiError(500, "Failed to create order with Razorpay");
+    throw new ApiError(
+      500,
+      error.message || "Something went wrong while creating order with Razorpay"
+    );
   }
 };
 
@@ -78,12 +81,15 @@ export const verifyPayment = async (req, res) => {
         .json(
           new ApiResponse(
             200,
-            payment,
+            { payment },
             "Payment verified and recorded successfully"
           )
         );
     } catch (error) {
-      throw new ApiError(500, "Failed to record payment");
+      throw new ApiError(
+        500,
+        error.message || "Something went wrong while saving payment details"
+      );
     }
   } else {
     throw new ApiError(400, "Payment verification failed");
